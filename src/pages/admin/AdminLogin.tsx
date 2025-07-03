@@ -10,39 +10,15 @@ import { toast } from '@/hooks/use-toast';
 import { Shield, BookOpen } from 'lucide-react';
 
 const AdminLogin = () => {
-  const { user, adminUser, signIn, loading: authLoading } = useAdminAuth();
+  const { adminUser, signIn, loading: authLoading } = useAdminAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  // If user is already logged in and is an admin, redirect to dashboard
-  if (user && adminUser && !authLoading) {
+  // If admin is already logged in, redirect to dashboard
+  if (adminUser && !authLoading) {
     return <Navigate to="/admin/dashboard" replace />;
-  }
-
-  // If user is logged in but not an admin, show message
-  if (user && !adminUser && !authLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-indigo-50 flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <Card className="border-red-200">
-            <CardHeader>
-              <CardTitle className="text-red-700">Access Denied</CardTitle>
-              <CardDescription>You don't have admin privileges.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button
-                onClick={() => window.location.href = '/'}
-                className="w-full bg-emerald-600 hover:bg-emerald-700"
-              >
-                Go to Student Dashboard
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -66,6 +42,12 @@ const AdminLogin = () => {
         description: error.message,
         variant: "destructive"
       });
+    } else {
+      toast({
+        title: "Success",
+        description: "Welcome to the admin dashboard!",
+      });
+      navigate('/admin/dashboard');
     }
   };
 
@@ -124,7 +106,7 @@ const AdminLogin = () => {
             </form>
             <div className="mt-4 text-center">
               <p className="text-xs text-gray-500 mb-2">
-                Note: Only registered admin users can access this panel.
+                Demo: Use any password with an existing admin email
               </p>
               <Button
                 variant="outline"

@@ -1,13 +1,15 @@
-
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { CheckCircle, XCircle, RefreshCw } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import Sidebar from '@/components/Sidebar';
-import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { toast } from '@/hooks/use-toast';
+import { Shuffle, CheckCircle, XCircle, RotateCcw } from 'lucide-react';
 
 interface PracticeQuestion {
   id: string;
@@ -15,105 +17,108 @@ interface PracticeQuestion {
   options: string[];
   correct_answer: string;
   explanation: string;
+  subject_id: string;
   topic: string;
   difficulty: string;
 }
 
 const Practice = () => {
   const { subjectId } = useParams();
+  const { user } = useAuth();
   const [questions, setQuestions] = useState<PracticeQuestion[]>([]);
-  const [currentQuestion, setCurrentQuestion] = useState<PracticeQuestion | null>(null);
-  const [selectedAnswer, setSelectedAnswer] = useState<string>('');
-  const [showAnswer, setShowAnswer] = useState(false);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
+  const [showResults, setShowResults] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [score, setScore] = useState({ correct: 0, total: 0 });
 
   useEffect(() => {
+    const fetchQuestions = async () => {
+      try {
+        let query = supabase
+          .from('practice_questions')
+          .select('*');
+
+        if (subjectId) {
+          query = query.eq('subject_id', subjectId);
+        }
+
+        const { data, error } = await query.limit(10);
+
+        if (error) throw error;
+
+        // Safely parse the options field
+        const parsedQuestions = data?.map(q => ({
+          ...q,
+          options: Array.isArray(q.options) ? q.options as string[] : []
+        })) || [];
+
+        setQuestions(parsedQuestions);
+      } catch (error) {
+        console.error('Error fetching practice questions:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load practice questions",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchQuestions();
   }, [subjectId]);
 
-  const fetchQuestions = async () => {
-    try {
-      const targetSubject = subjectId || 'physics';
-      
-      const { data, error } = await supabase
-        .from('practice_questions')
-        .select('*')
-        .eq('subject_id', targetSubject)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      // Type assertion to handle the Json type from Supabase
-      const questionsData: PracticeQuestion[] = (data || []).map(q => ({
-        ...q,
-        options: Array.isArray(q.options) ? q.options as string[] : []
-      }));
-      
-      setQuestions(questionsData);
-      if (questionsData.length > 0) {
-        setCurrentQuestion(questionsData[Math.floor(Math.random() * questionsData.length)]);
-      }
-    } catch (error) {
-      console.error('Error fetching questions:', error);
-      toast.error('Failed to load practice questions');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAnswerSelect = (answer: string) => {
-    setSelectedAnswer(answer);
-  };
-
-  const handleSubmitAnswer = () => {
-    if (!currentQuestion || !selectedAnswer) return;
-
-    const isCorrect = selectedAnswer === currentQuestion.correct_answer;
-    setScore(prev => ({
-      correct: prev.correct + (isCorrect ? 1 : 0),
-      total: prev.total + 1
+  const handleAnswerSelect = (value: string) => {
+    setUserAnswers(prev => ({
+      ...prev,
+      [currentQuestionIndex]: value
     }));
-
-    setShowAnswer(true);
-    
-    if (isCorrect) {
-      toast.success('Correct! Well done!');
-    } else {
-      toast.error('Incorrect. Check the explanation below.');
-    }
   };
 
-  const handleNextQuestion = () => {
-    if (questions.length === 0) return;
-    
-    const randomQuestion = questions[Math.floor(Math.random() * questions.length)];
-    setCurrentQuestion(randomQuestion);
-    setSelectedAnswer('');
-    setShowAnswer(false);
+  const handleNext = () => {
+    setCurrentQuestionIndex(prev => prev + 1);
   };
 
-  const getSubjectName = () => {
-    if (subjectId === 'physics') return 'Physics';
-    if (subjectId === 'chemistry') return 'Chemistry';
-    return 'Mixed Practice';
+  const handlePrevious = () => {
+    setCurrentQuestionIndex(prev => Math.max(0, prev - 1));
+  };
+
+  const handleSubmit = () => {
+    setShowResults(true);
+  };
+
+  const calculateScore = () => {
+    let correctAnswers = 0;
+    questions.forEach((question, index) => {
+      if (userAnswers[index] === question.correct_answer) {
+        correctAnswers++;
+      }
+    });
+    return (correctAnswers / questions.length) * 100;
   };
 
   const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty?.toLowerCase()) {
-      case 'easy': return 'bg-green-100 text-green-800';
-      case 'medium': return 'bg-yellow-100 text-yellow-800';
-      case 'hard': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+    switch (difficulty) {
+      case 'Easy':
+        return 'text-green-500';
+      case 'Medium':
+        return 'text-yellow-500';
+      case 'Hard':
+        return 'text-red-500';
+      default:
+        return 'text-gray-500';
     }
   };
 
   if (loading) {
     return (
-      <div className="flex h-screen">
+      <div className="min-h-screen bg-gray-50">
         <Sidebar />
-        <div className="flex-1 lg:ml-64 p-8">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+        <div className="lg:pl-64 p-8">
+          <div className="animate-pulse space-y-4">
+            <div className="h-8 bg-gray-200 rounded w-1/3"></div>
+            <div className="h-64 bg-gray-200 rounded"></div>
+          </div>
         </div>
       </div>
     );
@@ -121,155 +126,241 @@ const Practice = () => {
 
   if (questions.length === 0) {
     return (
-      <div className="flex h-screen">
+      <div className="min-h-screen bg-gray-50">
         <Sidebar />
-        <div className="flex-1 lg:ml-64 p-8">
+        <div className="lg:pl-64 p-8">
           <div className="text-center">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">No practice questions available</h2>
-            <p className="text-gray-600">Check back later for more questions!</p>
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">No Practice Questions Available</h1>
+            <p className="text-gray-600 mb-4">
+              Practice questions for this subject are not available yet.
+            </p>
+            <Button onClick={() => window.history.back()}>
+              Go Back
+            </Button>
           </div>
         </div>
       </div>
     );
   }
 
+  const currentQuestion = questions[currentQuestionIndex];
+  const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
+
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50">
       <Sidebar />
-      <div className="flex-1 lg:ml-64 overflow-auto">
-        <div className="p-6 lg:p-8">
-          <div className="max-w-4xl mx-auto">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">{getSubjectName()} Practice</h1>
-                <p className="text-gray-600 mt-1">Test your knowledge with practice questions</p>
-              </div>
-              
-              {/* Score Display */}
-              <div className="text-right">
-                <div className="text-2xl font-bold text-indigo-600">
-                  {score.total > 0 ? Math.round((score.correct / score.total) * 100) : 0}%
-                </div>
-                <div className="text-sm text-gray-600">
-                  {score.correct}/{score.total} correct
-                </div>
-              </div>
+      <div className="lg:pl-64 p-4 lg:p-8 pt-16 lg:pt-8">
+        <div className="max-w-4xl mx-auto">
+          {/* Header */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h1 className="text-3xl font-bold text-gray-900">
+                Practice Questions
+                {subjectId && (
+                  <span className="text-lg font-normal text-gray-600 ml-2">
+                    • {subjectId.charAt(0).toUpperCase() + subjectId.slice(1)}
+                  </span>
+                )}
+              </h1>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setQuestions(prev => [...prev].sort(() => Math.random() - 0.5));
+                  setCurrentQuestionIndex(0);
+                  setUserAnswers({});
+                  setShowResults(false);
+                }}
+              >
+                <Shuffle className="mr-2 h-4 w-4" />
+                Shuffle
+              </Button>
             </div>
+            
+            {/* Progress Bar */}
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div 
+                className="bg-indigo-600 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <p className="text-sm text-gray-600 mt-2">
+              Question {currentQuestionIndex + 1} of {questions.length}
+            </p>
+          </div>
 
-            {currentQuestion && (
-              <Card className="mb-6">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-xl">Practice Question</CardTitle>
-                    <div className="flex gap-2">
-                      {currentQuestion.topic && (
-                        <Badge variant="outline">{currentQuestion.topic}</Badge>
-                      )}
-                      <Badge className={getDifficultyColor(currentQuestion.difficulty)}>
-                        {currentQuestion.difficulty || 'Medium'}
-                      </Badge>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <h3 className="text-lg font-semibold">{currentQuestion.question}</h3>
-                  
-                  <div className="space-y-3">
-                    {currentQuestion.options.map((option, index) => (
-                      <button
-                        key={index}
-                        onClick={() => handleAnswerSelect(option)}
-                        disabled={showAnswer}
-                        className={`w-full p-4 text-left rounded-lg border-2 transition-colors ${
-                          showAnswer
-                            ? option === currentQuestion.correct_answer
-                              ? 'border-green-500 bg-green-50 text-green-800'
-                              : option === selectedAnswer && option !== currentQuestion.correct_answer
-                              ? 'border-red-500 bg-red-50 text-red-800'
-                              : 'border-gray-200 bg-gray-50'
-                            : selectedAnswer === option
-                            ? 'border-indigo-500 bg-indigo-50'
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span>{option}</span>
-                          {showAnswer && (
-                            <>
-                              {option === currentQuestion.correct_answer && (
-                                <CheckCircle className="h-5 w-5 text-green-500" />
-                              )}
-                              {option === selectedAnswer && option !== currentQuestion.correct_answer && (
-                                <XCircle className="h-5 w-5 text-red-500" />
-                              )}
-                            </>
-                          )}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-
-                  {showAnswer && currentQuestion.explanation && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                      <h4 className="font-semibold text-blue-900 mb-2">Explanation:</h4>
-                      <p className="text-blue-800">{currentQuestion.explanation}</p>
-                    </div>
-                  )}
-
-                  <div className="flex justify-between">
-                    <Button
+          {!showResults ? (
+            /* Question Card */
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-xl">
+                    {currentQuestion.question}
+                  </CardTitle>
+                  <div className="flex space-x-2">
+                    <Badge variant="outline">
+                      {currentQuestion.topic}
+                    </Badge>
+                    <Badge 
                       variant="outline"
-                      onClick={handleNextQuestion}
-                      className="flex items-center gap-2"
+                      className={`${currentQuestion.difficulty === 'Easy' ? 'text-green-600' : 
+                        currentQuestion.difficulty === 'Medium' ? 'text-yellow-600' : 'text-red-600'}`}
                     >
-                      <RefreshCw className="h-4 w-4" />
-                      New Question
-                    </Button>
-                    
-                    {!showAnswer ? (
+                      {currentQuestion.difficulty}
+                    </Badge>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <RadioGroup
+                  value={userAnswers[currentQuestionIndex] || ''}
+                  onValueChange={(value) => setUserAnswers(prev => ({
+                    ...prev,
+                    [currentQuestionIndex]: value
+                  }))}
+                  className="space-y-3"
+                >
+                  {currentQuestion.options.map((option, index) => (
+                    <div key={index} className="flex items-center space-x-2">
+                      <RadioGroupItem 
+                        value={option} 
+                        id={`option-${index}`}
+                      />
+                      <Label htmlFor={`option-${index}`} className="flex-1 cursor-pointer">
+                        {option}
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+
+                {/* Navigation */}
+                <div className="flex justify-between mt-8">
+                  <Button
+                    variant="outline"
+                    onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))}
+                    disabled={currentQuestionIndex === 0}
+                  >
+                    Previous
+                  </Button>
+                  
+                  <div className="flex space-x-2">
+                    {currentQuestionIndex === questions.length - 1 ? (
                       <Button
-                        onClick={handleSubmitAnswer}
-                        disabled={!selectedAnswer}
-                        className="bg-indigo-600 hover:bg-indigo-700"
+                        onClick={() => setShowResults(true)}
+                        disabled={Object.keys(userAnswers).length !== questions.length}
                       >
-                        Submit Answer
+                        Submit Practice
                       </Button>
                     ) : (
                       <Button
-                        onClick={handleNextQuestion}
-                        className="bg-indigo-600 hover:bg-indigo-700"
+                        onClick={() => setCurrentQuestionIndex(prev => prev + 1)}
                       >
-                        Next Question
+                        Next
                       </Button>
                     )}
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            /* Results */
+            <div className="space-y-6">
+              {/* Overall Score */}
+              <Card>
+                <CardHeader className="text-center">
+                  <CardTitle className="text-2xl">Practice Complete!</CardTitle>
+                  <CardDescription>
+                    Here's how you performed on this practice session.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="text-center">
+                  <div className="text-4xl font-bold text-indigo-600 mb-2">
+                    {Math.round((Object.values(userAnswers).filter((answer, index) => 
+                      answer === questions[index]?.correct_answer
+                    ).length / questions.length) * 100)}%
+                  </div>
+                  <p className="text-gray-600">
+                    {Object.values(userAnswers).filter((answer, index) => 
+                      answer === questions[index]?.correct_answer
+                    ).length} out of {questions.length} correct
+                  </p>
+                  
+                  <div className="flex justify-center space-x-4 mt-6">
+                    <Button
+                      onClick={() => {
+                        setShowResults(false);
+                        setCurrentQuestionIndex(0);
+                        setUserAnswers({});
+                      }}
+                    >
+                      <RotateCcw className="mr-2 h-4 w-4" />
+                      Try Again
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => window.history.back()}
+                    >
+                      Back to Dashboard
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
-            )}
 
-            {/* Quick Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <div className="text-2xl font-bold text-indigo-600">{questions.length}</div>
-                  <div className="text-sm text-gray-600">Total Questions</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <div className="text-2xl font-bold text-green-600">{score.correct}</div>
-                  <div className="text-sm text-gray-600">Correct Answers</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <div className="text-2xl font-bold text-orange-600">{score.total}</div>
-                  <div className="text-sm text-gray-600">Questions Attempted</div>
-                </CardContent>
-              </Card>
+              {/* Question Review */}
+              <div className="space-y-4">
+                {questions.map((question, index) => {
+                  const userAnswer = userAnswers[index];
+                  const isCorrect = userAnswer === question.correct_answer;
+                  
+                  return (
+                    <Card key={index}>
+                      <CardHeader>
+                        <CardTitle className="flex items-center space-x-2">
+                          {isCorrect ? (
+                            <CheckCircle className="h-5 w-5 text-green-600" />
+                          ) : (
+                            <XCircle className="h-5 w-5 text-red-600" />
+                          )}
+                          <span>Question {index + 1}</span>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="font-medium mb-3">{question.question}</p>
+                        <div className="space-y-2 mb-4">
+                          {question.options.map((option, optionIndex) => (
+                            <div 
+                              key={optionIndex}
+                              className={`p-2 rounded border ${
+                                option === question.correct_answer 
+                                  ? 'bg-green-50 border-green-200 text-green-800'
+                                  : option === userAnswer && !isCorrect
+                                  ? 'bg-red-50 border-red-200 text-red-800'
+                                  : 'bg-gray-50 border-gray-200'
+                              }`}
+                            >
+                              {option}
+                              {option === question.correct_answer && (
+                                <span className="ml-2 text-sm font-medium">(Correct)</span>
+                              )}
+                              {option === userAnswer && !isCorrect && (
+                                <span className="ml-2 text-sm font-medium">(Your answer)</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                        {question.explanation && (
+                          <div className="p-3 bg-blue-50 border border-blue-200 rounded">
+                            <p className="text-sm text-blue-800">
+                              <strong>Explanation:</strong> {question.explanation}
+                            </p>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

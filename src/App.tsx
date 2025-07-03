@@ -40,15 +40,11 @@ const App = () => (
           <Route path="/signin" element={<SignIn />} />
           <Route path="/signup" element={<SignUp />} />
 
-          {/* Admin routes */}
-          <Route path="/admin/login" element={
-            <AdminAuthProvider>
-              <AdminLogin />
-            </AdminAuthProvider>
-          } />
+          {/* Admin routes with AdminAuthProvider */}
           <Route path="/admin/*" element={
             <AdminAuthProvider>
               <Routes>
+                <Route path="login" element={<AdminLogin />} />
                 <Route path="dashboard" element={
                   <AdminProtectedRoute>
                     <AdminDashboard />
@@ -64,12 +60,12 @@ const App = () => (
                     <AdminStudents />
                   </AdminProtectedRoute>
                 } />
-                <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
+                <Route path="" element={<Navigate to="/admin/dashboard" replace />} />
               </Routes>
             </AdminAuthProvider>
           } />
 
-          {/* Student routes */}
+          {/* Student routes with AuthProvider */}
           <Route path="/*" element={
             <AuthProvider>
               <Routes>

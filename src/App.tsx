@@ -36,10 +36,6 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          {/* Public routes */}
-          <Route path="/signin" element={<SignIn />} />
-          <Route path="/signup" element={<SignUp />} />
-
           {/* Admin routes with AdminAuthProvider */}
           <Route path="/admin/*" element={
             <AdminAuthProvider>
@@ -65,10 +61,15 @@ const App = () => (
             </AdminAuthProvider>
           } />
 
-          {/* Student routes with AuthProvider */}
+          {/* All other routes with AuthProvider */}
           <Route path="/*" element={
             <AuthProvider>
               <Routes>
+                {/* Public routes */}
+                <Route path="signin" element={<SignIn />} />
+                <Route path="signup" element={<SignUp />} />
+
+                {/* Protected student routes */}
                 <Route path="dashboard" element={
                   <ProtectedRoute>
                     <Dashboard />

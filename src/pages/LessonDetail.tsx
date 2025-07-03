@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -95,20 +96,33 @@ const LessonDetail = () => {
     setScore(newScore);
     setSubmitted(true);
 
-    // Save progress to database
+    // Save progress to user_progress table
     try {
       const { error } = await supabase
         .from('user_progress')
-        .upsert([
+        .upsert(
           { 
-            user_id: user?.id, 
-            lesson_id: lessonId, 
-            score: newScore,
-            subject_id: subjectId
-          }
-        ], { onConflict: ['user_id', 'lesson_id'] });
+            user_id: user?.id!, 
+            lesson_id: lessonId!, 
+            score: newScore
+          },
+          { onConflict: 'user_id,lesson_id' }
+        );
 
       if (error) throw error;
+
+      // Also save to results table for admin tracking
+      const { error: resultsError } = await supabase
+        .from('results')
+        .insert({
+          student_id: user?.id!,
+          subject_id: subjectId!,
+          lesson_id: lessonId!,
+          score: newScore,
+          total: 100
+        });
+
+      if (resultsError) console.warn('Could not save to results table:', resultsError);
 
       toast({
         title: "Evaluation Submitted",

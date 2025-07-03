@@ -29,50 +29,111 @@ export const AdminAuthProvider = ({ children }: { children: React.ReactNode }) =
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        if (!isMounted) return;
+        
         console.log('Admin auth state changed:', event, session?.user?.email);
-        setSession(session);
-        setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Fetch admin user data
-          const { data: adminData } = await supabase
-            .from('admin_users')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
+          setSession(session);
+          setUser(session.user);
           
-          setAdminUser(adminData);
+          // Check if user is an admin
+          try {
+            const { data: adminData, error } = await supabase
+              .from('admin_users')
+              .select('*')
+              .eq('id', session.user.id)
+              .maybeSingle();
+            
+            if (error && error.code !== 'PGRST116') {
+              console.error('Error fetching admin user:', error);
+            }
+            
+            if (isMounted) {
+              setAdminUser(adminData);
+            }
+          } catch (error) {
+            console.error('Error in admin user fetch:', error);
+            if (isMounted) {
+              setAdminUser(null);
+            }
+          }
         } else {
-          setAdminUser(null);
+          if (isMounted) {
+            setSession(null);
+            setUser(null);
+            setAdminUser(null);
+          }
         }
         
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     );
 
     // Check for existing session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        // Fetch admin user data
-        const { data: adminData } = await supabase
-          .from('admin_users')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
+    const checkSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
         
-        setAdminUser(adminData);
+        if (error) {
+          console.error('Error getting session:', error);
+          if (isMounted) {
+            setLoading(false);
+          }
+          return;
+        }
+        
+        if (session?.user && isMounted) {
+          setSession(session);
+          setUser(session.user);
+          
+          // Check if user is an admin
+          try {
+            const { data: adminData, error: adminError } = await supabase
+              .from('admin_users')
+              .select('*')
+              .eq('id', session.user.id)
+              .maybeSingle();
+            
+            if (adminError && adminError.code !== 'PGRST116') {
+              console.error('Error fetching admin user:', adminError);
+            }
+            
+            if (isMounted) {
+              setAdminUser(adminData);
+            }
+          } catch (error) {
+            console.error('Error in admin user fetch:', error);
+            if (isMounted) {
+              setAdminUser(null);
+            }
+          }
+        }
+        
+        if (isMounted) {
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Error in checkSession:', error);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
-      
-      setLoading(false);
-    });
+    };
 
-    return () => subscription.unsubscribe();
+    checkSession();
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {

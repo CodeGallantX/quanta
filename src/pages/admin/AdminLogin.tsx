@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,13 +10,39 @@ import { toast } from '@/hooks/use-toast';
 import { Shield, BookOpen } from 'lucide-react';
 
 const AdminLogin = () => {
-  const { user, signIn } = useAdminAuth();
+  const { user, adminUser, signIn, loading: authLoading } = useAdminAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
-  if (user) {
+  // If user is already logged in and is an admin, redirect to dashboard
+  if (user && adminUser && !authLoading) {
     return <Navigate to="/admin/dashboard" replace />;
+  }
+
+  // If user is logged in but not an admin, show message
+  if (user && !adminUser && !authLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-indigo-50 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <Card className="border-red-200">
+            <CardHeader>
+              <CardTitle className="text-red-700">Access Denied</CardTitle>
+              <CardDescription>You don't have admin privileges.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                onClick={() => window.location.href = '/'}
+                className="w-full bg-emerald-600 hover:bg-emerald-700"
+              >
+                Go to Student Dashboard
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -39,11 +65,6 @@ const AdminLogin = () => {
         title: "Sign In Failed",
         description: error.message,
         variant: "destructive"
-      });
-    } else {
-      toast({
-        title: "Welcome back!",
-        description: "You have successfully signed in to the admin panel."
       });
     }
   };
@@ -96,15 +117,22 @@ const AdminLogin = () => {
               <Button 
                 type="submit" 
                 className="w-full bg-emerald-600 hover:bg-emerald-700" 
-                disabled={loading}
+                disabled={loading || authLoading}
               >
                 {loading ? 'Signing In...' : 'Sign In'}
               </Button>
             </form>
             <div className="mt-4 text-center">
-              <p className="text-xs text-gray-500">
-                Demo credentials: admin@quanta.edu / admin123
+              <p className="text-xs text-gray-500 mb-2">
+                Note: Only registered admin users can access this panel.
               </p>
+              <Button
+                variant="outline"
+                onClick={() => navigate('/')}
+                className="text-xs"
+              >
+                Go to Student Portal
+              </Button>
             </div>
           </CardContent>
         </Card>

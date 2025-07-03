@@ -1,14 +1,13 @@
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import Sidebar from '@/components/Sidebar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CheckCircle, X, RefreshCw, Brain } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+import { CheckCircle, XCircle, RefreshCw } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import Sidebar from '@/components/Sidebar';
+import { toast } from 'sonner';
 
 interface PracticeQuestion {
   id: string;
@@ -18,84 +17,70 @@ interface PracticeQuestion {
   explanation: string;
   topic: string;
   difficulty: string;
-  subject_id: string;
 }
 
 const Practice = () => {
-  const { subjectId } = useParams<{ subjectId?: string }>();
+  const { subjectId } = useParams();
   const [questions, setQuestions] = useState<PracticeQuestion[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState<PracticeQuestion | null>(null);
   const [selectedAnswer, setSelectedAnswer] = useState<string>('');
   const [showAnswer, setShowAnswer] = useState(false);
-  const [score, setScore] = useState({ correct: 0, total: 0 });
-  const [selectedSubject, setSelectedSubject] = useState(subjectId || 'all');
-  const [selectedDifficulty, setSelectedDifficulty] = useState('all');
   const [loading, setLoading] = useState(true);
+  const [score, setScore] = useState({ correct: 0, total: 0 });
 
   useEffect(() => {
     fetchQuestions();
-  }, [selectedSubject, selectedDifficulty]);
+  }, [subjectId]);
 
   const fetchQuestions = async () => {
     try {
-      let query = supabase.from('practice_questions').select('*');
+      const targetSubject = subjectId || 'physics';
       
-      if (selectedSubject !== 'all') {
-        query = query.eq('subject_id', selectedSubject);
-      }
-      
-      if (selectedDifficulty !== 'all') {
-        query = query.eq('difficulty', selectedDifficulty);
-      }
+      const { data, error } = await supabase
+        .from('practice_questions')
+        .select('*')
+        .eq('subject_id', targetSubject)
+        .order('created_at', { ascending: false });
 
-      const { data } = await query;
-      setQuestions(data || []);
+      if (error) throw error;
+
+      // Type assertion to handle the Json type from Supabase
+      const questionsData: PracticeQuestion[] = (data || []).map(q => ({
+        ...q,
+        options: Array.isArray(q.options) ? q.options as string[] : []
+      }));
       
-      if (data && data.length > 0) {
-        const randomQuestion = data[Math.floor(Math.random() * data.length)];
-        setCurrentQuestion(randomQuestion);
-      } else {
-        setCurrentQuestion(null);
+      setQuestions(questionsData);
+      if (questionsData.length > 0) {
+        setCurrentQuestion(questionsData[Math.floor(Math.random() * questionsData.length)]);
       }
     } catch (error) {
       console.error('Error fetching questions:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load practice questions.",
-        variant: "destructive"
-      });
+      toast.error('Failed to load practice questions');
     } finally {
       setLoading(false);
     }
   };
 
   const handleAnswerSelect = (answer: string) => {
-    if (showAnswer) return;
     setSelectedAnswer(answer);
   };
 
   const handleSubmitAnswer = () => {
-    if (!selectedAnswer || !currentQuestion) return;
-    
-    setShowAnswer(true);
+    if (!currentQuestion || !selectedAnswer) return;
+
     const isCorrect = selectedAnswer === currentQuestion.correct_answer;
-    
     setScore(prev => ({
       correct: prev.correct + (isCorrect ? 1 : 0),
       total: prev.total + 1
     }));
 
+    setShowAnswer(true);
+    
     if (isCorrect) {
-      toast({
-        title: "Correct! 🎉",
-        description: "Well done!",
-      });
+      toast.success('Correct! Well done!');
     } else {
-      toast({
-        title: "Not quite right",
-        description: "Check the explanation below.",
-        variant: "destructive"
-      });
+      toast.error('Incorrect. Check the explanation below.');
     }
   };
 
@@ -108,8 +93,14 @@ const Practice = () => {
     setShowAnswer(false);
   };
 
+  const getSubjectName = () => {
+    if (subjectId === 'physics') return 'Physics';
+    if (subjectId === 'chemistry') return 'Chemistry';
+    return 'Mixed Practice';
+  };
+
   const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
+    switch (difficulty?.toLowerCase()) {
       case 'easy': return 'bg-green-100 text-green-800';
       case 'medium': return 'bg-yellow-100 text-yellow-800';
       case 'hard': return 'bg-red-100 text-red-800';
@@ -117,22 +108,25 @@ const Practice = () => {
     }
   };
 
-  const getSubjectColor = (subject: string) => {
-    return subject === 'physics' 
-      ? 'bg-blue-100 text-blue-800' 
-      : 'bg-green-100 text-green-800';
-  };
-
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="flex h-screen">
         <Sidebar />
-        <div className="lg:pl-64 p-8">
-          <div className="max-w-3xl mx-auto">
-            <div className="animate-pulse space-y-4">
-              <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-              <div className="h-64 bg-gray-200 rounded"></div>
-            </div>
+        <div className="flex-1 lg:ml-64 p-8">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (questions.length === 0) {
+    return (
+      <div className="flex h-screen">
+        <Sidebar />
+        <div className="flex-1 lg:ml-64 p-8">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">No practice questions available</h2>
+            <p className="text-gray-600">Check back later for more questions!</p>
           </div>
         </div>
       </div>
@@ -140,175 +134,142 @@ const Practice = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50">
       <Sidebar />
-      <div className="lg:pl-64 p-4 lg:p-8 pt-16 lg:pt-8">
-        <div className="max-w-3xl mx-auto">
-          {/* Header */}
-          <div className="mb-8">
-            <div className="flex items-center mb-4">
-              <Brain className="h-8 w-8 text-purple-600 mr-3" />
-              <h1 className="text-3xl font-bold text-gray-900">Practice Questions</h1>
-            </div>
-            
-            {/* Score Display */}
-            {score.total > 0 && (
-              <div className="bg-white rounded-lg p-4 mb-6 border">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <span className="text-lg font-semibold text-gray-700">
-                      Score: {score.correct}/{score.total}
-                    </span>
-                    <span className="text-sm text-gray-500">
-                      ({Math.round((score.correct / score.total) * 100)}% accuracy)
-                    </span>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setScore({ correct: 0, total: 0 })}
-                  >
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Reset
-                  </Button>
+      <div className="flex-1 lg:ml-64 overflow-auto">
+        <div className="p-6 lg:p-8">
+          <div className="max-w-4xl mx-auto">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">{getSubjectName()} Practice</h1>
+                <p className="text-gray-600 mt-1">Test your knowledge with practice questions</p>
+              </div>
+              
+              {/* Score Display */}
+              <div className="text-right">
+                <div className="text-2xl font-bold text-indigo-600">
+                  {score.total > 0 ? Math.round((score.correct / score.total) * 100) : 0}%
+                </div>
+                <div className="text-sm text-gray-600">
+                  {score.correct}/{score.total} correct
                 </div>
               </div>
-            )}
-
-            {/* Filters */}
-            <div className="flex flex-col sm:flex-row gap-4 mb-6">
-              <div className="flex-1">
-                <Select value={selectedSubject} onValueChange={setSelectedSubject}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select subject" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Subjects</SelectItem>
-                    <SelectItem value="physics">Physics</SelectItem>
-                    <SelectItem value="chemistry">Chemistry</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex-1">
-                <Select value={selectedDifficulty} onValueChange={setSelectedDifficulty}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select difficulty" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Difficulties</SelectItem>
-                    <SelectItem value="easy">Easy</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="hard">Hard</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
-          </div>
 
-          {/* Question Card */}
-          {currentQuestion ? (
-            <Card className="mb-6">
-              <CardHeader>
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center space-x-2">
-                    <Badge className={getDifficultyColor(currentQuestion.difficulty)}>
-                      {currentQuestion.difficulty}
-                    </Badge>
-                    <Badge className={getSubjectColor(currentQuestion.subject_id)}>
-                      {currentQuestion.subject_id}
-                    </Badge>
-                    {currentQuestion.topic && (
-                      <Badge variant="outline">{currentQuestion.topic}</Badge>
+            {currentQuestion && (
+              <Card className="mb-6">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-xl">Practice Question</CardTitle>
+                    <div className="flex gap-2">
+                      {currentQuestion.topic && (
+                        <Badge variant="outline">{currentQuestion.topic}</Badge>
+                      )}
+                      <Badge className={getDifficultyColor(currentQuestion.difficulty)}>
+                        {currentQuestion.difficulty || 'Medium'}
+                      </Badge>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <h3 className="text-lg font-semibold">{currentQuestion.question}</h3>
+                  
+                  <div className="space-y-3">
+                    {currentQuestion.options.map((option, index) => (
+                      <button
+                        key={index}
+                        onClick={() => handleAnswerSelect(option)}
+                        disabled={showAnswer}
+                        className={`w-full p-4 text-left rounded-lg border-2 transition-colors ${
+                          showAnswer
+                            ? option === currentQuestion.correct_answer
+                              ? 'border-green-500 bg-green-50 text-green-800'
+                              : option === selectedAnswer && option !== currentQuestion.correct_answer
+                              ? 'border-red-500 bg-red-50 text-red-800'
+                              : 'border-gray-200 bg-gray-50'
+                            : selectedAnswer === option
+                            ? 'border-indigo-500 bg-indigo-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span>{option}</span>
+                          {showAnswer && (
+                            <>
+                              {option === currentQuestion.correct_answer && (
+                                <CheckCircle className="h-5 w-5 text-green-500" />
+                              )}
+                              {option === selectedAnswer && option !== currentQuestion.correct_answer && (
+                                <XCircle className="h-5 w-5 text-red-500" />
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+
+                  {showAnswer && currentQuestion.explanation && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-blue-900 mb-2">Explanation:</h4>
+                      <p className="text-blue-800">{currentQuestion.explanation}</p>
+                    </div>
+                  )}
+
+                  <div className="flex justify-between">
+                    <Button
+                      variant="outline"
+                      onClick={handleNextQuestion}
+                      className="flex items-center gap-2"
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                      New Question
+                    </Button>
+                    
+                    {!showAnswer ? (
+                      <Button
+                        onClick={handleSubmitAnswer}
+                        disabled={!selectedAnswer}
+                        className="bg-indigo-600 hover:bg-indigo-700"
+                      >
+                        Submit Answer
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={handleNextQuestion}
+                        className="bg-indigo-600 hover:bg-indigo-700"
+                      >
+                        Next Question
+                      </Button>
                     )}
                   </div>
-                </div>
-                <CardTitle className="text-xl">{currentQuestion.question}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {currentQuestion.options.map((option, index) => {
-                  let optionClass = 'p-4 border rounded-lg cursor-pointer transition-colors ';
-                  
-                  if (showAnswer) {
-                    if (option === currentQuestion.correct_answer) {
-                      optionClass += 'border-green-500 bg-green-50 text-green-800';
-                    } else if (option === selectedAnswer && option !== currentQuestion.correct_answer) {
-                      optionClass += 'border-red-500 bg-red-50 text-red-800';
-                    } else {
-                      optionClass += 'border-gray-200 bg-gray-50 text-gray-600 cursor-not-allowed';
-                    }
-                  } else {
-                    if (selectedAnswer === option) {
-                      optionClass += 'border-indigo-500 bg-indigo-50';
-                    } else {
-                      optionClass += 'border-gray-200 hover:border-gray-300';
-                    }
-                  }
+                </CardContent>
+              </Card>
+            )}
 
-                  return (
-                    <div
-                      key={index}
-                      className={optionClass}
-                      onClick={() => handleAnswerSelect(option)}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span>{option}</span>
-                        {showAnswer && (
-                          <>
-                            {option === currentQuestion.correct_answer && (
-                              <CheckCircle className="h-5 w-5 text-green-500" />
-                            )}
-                            {option === selectedAnswer && option !== currentQuestion.correct_answer && (
-                              <X className="h-5 w-5 text-red-500" />
-                            )}
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-
-                {showAnswer && currentQuestion.explanation && (
-                  <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <h4 className="font-medium text-blue-900 mb-2">Explanation:</h4>
-                    <p className="text-blue-800">{currentQuestion.explanation}</p>
-                  </div>
-                )}
-
-                <div className="pt-4">
-                  {!showAnswer ? (
-                    <Button 
-                      onClick={handleSubmitAnswer}
-                      disabled={!selectedAnswer}
-                      className="w-full"
-                    >
-                      Submit Answer
-                    </Button>
-                  ) : (
-                    <Button 
-                      onClick={handleNextQuestion}
-                      className="w-full"
-                    >
-                      Next Question
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <CardContent className="p-8 text-center">
-                <Brain className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No questions found</h3>
-                <p className="text-gray-600 mb-4">
-                  Try adjusting your filters or check back later for new questions.
-                </p>
-                <Button variant="outline" onClick={fetchQuestions}>
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Refresh
-                </Button>
-              </CardContent>
-            </Card>
-          )}
+            {/* Quick Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card>
+                <CardContent className="p-4 text-center">
+                  <div className="text-2xl font-bold text-indigo-600">{questions.length}</div>
+                  <div className="text-sm text-gray-600">Total Questions</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4 text-center">
+                  <div className="text-2xl font-bold text-green-600">{score.correct}</div>
+                  <div className="text-sm text-gray-600">Correct Answers</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4 text-center">
+                  <div className="text-2xl font-bold text-orange-600">{score.total}</div>
+                  <div className="text-sm text-gray-600">Questions Attempted</div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </div>
       </div>
     </div>

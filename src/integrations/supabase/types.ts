@@ -9,6 +9,33 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      admin_users: {
+        Row: {
+          created_at: string | null
+          email: string
+          full_name: string
+          id: string
+          password_hash: string
+          role: string
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          full_name: string
+          id?: string
+          password_hash: string
+          role?: string
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          full_name?: string
+          id?: string
+          password_hash?: string
+          role?: string
+        }
+        Relationships: []
+      }
       lessons: {
         Row: {
           content: string
@@ -16,7 +43,9 @@ export type Database = {
           evaluation_questions: Json | null
           id: string
           order_num: number
+          preview: string | null
           subject_id: string
+          thumbnail_url: string | null
           title: string
         }
         Insert: {
@@ -25,7 +54,9 @@ export type Database = {
           evaluation_questions?: Json | null
           id: string
           order_num: number
+          preview?: string | null
           subject_id: string
+          thumbnail_url?: string | null
           title: string
         }
         Update: {
@@ -34,7 +65,9 @@ export type Database = {
           evaluation_questions?: Json | null
           id?: string
           order_num?: number
+          preview?: string | null
           subject_id?: string
+          thumbnail_url?: string | null
           title?: string
         }
         Relationships: [
@@ -91,24 +124,82 @@ export type Database = {
           },
         ]
       }
+      results: {
+        Row: {
+          attempt_date: string | null
+          id: string
+          lesson_id: string
+          score: number
+          student_id: string
+          subject_id: string
+          total: number
+        }
+        Insert: {
+          attempt_date?: string | null
+          id?: string
+          lesson_id: string
+          score: number
+          student_id: string
+          subject_id: string
+          total: number
+        }
+        Update: {
+          attempt_date?: string | null
+          id?: string
+          lesson_id?: string
+          score?: number
+          student_id?: string
+          subject_id?: string
+          total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "results_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "results_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "results_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subjects: {
         Row: {
           created_at: string | null
           description: string | null
+          grade: string | null
           id: string
           name: string
+          thumbnail_url: string | null
         }
         Insert: {
           created_at?: string | null
           description?: string | null
+          grade?: string | null
           id: string
           name: string
+          thumbnail_url?: string | null
         }
         Update: {
           created_at?: string | null
           description?: string | null
+          grade?: string | null
           id?: string
           name?: string
+          thumbnail_url?: string | null
         }
         Relationships: []
       }

@@ -1,4 +1,4 @@
-# ⚛️ Quanta – Learn Physics & Chemistry Smarter
+# ⚛️ Quanta – Learn Physics & Chemistry Smarter - Yoruba too
 
 **Quanta** is a responsive and interactive learning platform designed for Grade 11 students to master **Physics** and **Chemistry** through structured lessons, interactive evaluations, and a rich pool of practice questions – all powered by **React**, **TailwindCSS**, and **Supabase**.
 

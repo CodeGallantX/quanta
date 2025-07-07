@@ -17,13 +17,14 @@ import { toast } from '@/hooks/use-toast';
 interface PracticeQuestion {
   id: string;
   question: string;
-  options: string[];
+  options: string[]; // Fixed: changed from Json to string[]
   correct_answer: string;
   explanation: string;
   topic: string;
   difficulty: string;
   subject_id: string;
   created_at: string;
+  subjects?: { name: string }; // Optional populated relation
 }
 
 interface Subject {
@@ -78,7 +79,18 @@ const AdminPracticeQuestions = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setQuestions(data || []);
+      
+      // Fixed: Properly parse the JSON options field
+      const parsedQuestions = (data || []).map(question => ({
+        ...question,
+        options: typeof question.options === 'string' 
+          ? JSON.parse(question.options) 
+          : Array.isArray(question.options) 
+            ? question.options 
+            : []
+      }));
+      
+      setQuestions(parsedQuestions);
     } catch (error) {
       console.error('Error fetching questions:', error);
       toast({
@@ -119,7 +131,7 @@ const AdminPracticeQuestions = () => {
           .from('practice_questions')
           .update({
             question: formData.question,
-            options: formData.options,
+            options: JSON.stringify(formData.options), // Ensure JSON string
             correct_answer: formData.correct_answer,
             explanation: formData.explanation,
             topic: formData.topic,
@@ -140,7 +152,7 @@ const AdminPracticeQuestions = () => {
           .from('practice_questions')
           .insert([{
             question: formData.question,
-            options: formData.options,
+            options: JSON.stringify(formData.options), // Ensure JSON string
             correct_answer: formData.correct_answer,
             explanation: formData.explanation,
             topic: formData.topic,
@@ -179,7 +191,7 @@ const AdminPracticeQuestions = () => {
 
       const questionsToInsert = parsedData.map(item => ({
         question: item.question,
-        options: item.options,
+        options: JSON.stringify(item.options), // Ensure JSON string
         correct_answer: item.correct_answer,
         explanation: item.explanation || '',
         topic: item.topic || '',

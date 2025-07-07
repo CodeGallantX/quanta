@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -105,13 +105,16 @@ const AdminLogin = () => {
               </Button>
             </form>
             <div className="mt-4 text-center">
-              <p className="text-xs text-gray-500 mb-2">
-                Demo: Use any password with an existing admin email
+              <p className="text-sm text-gray-600">
+                Don't have an admin account?{' '}
+                <Link to="/admin/signup" className="text-emerald-600 hover:text-emerald-700 font-medium">
+                  Sign up here
+                </Link>
               </p>
               <Button
                 variant="outline"
                 onClick={() => navigate('/')}
-                className="text-xs"
+                className="text-xs mt-2"
               >
                 Go to Student Portal
               </Button>

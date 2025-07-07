@@ -1,5 +1,6 @@
 
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { AdminLayout } from '@/components/AdminLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Edit, Trash2, BookOpen } from 'lucide-react';
+import { Plus, Edit, Trash2, BookOpen, List } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 interface Subject {
@@ -22,6 +23,7 @@ interface Subject {
 }
 
 const AdminCourses = () => {
+  const navigate = useNavigate();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -127,7 +129,7 @@ const AdminCourses = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this course?')) return;
+    if (!confirm('Are you sure you want to delete this course? This will also delete all associated lessons.')) return;
 
     try {
       const { error } = await supabase
@@ -282,6 +284,13 @@ const AdminCourses = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigate(`/admin/courses/${subject.id}/lessons`)}
+                        >
+                          <List className="h-4 w-4" />
+                        </Button>
                         <Button
                           variant="outline"
                           size="sm"

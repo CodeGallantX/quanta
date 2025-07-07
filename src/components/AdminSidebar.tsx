@@ -15,7 +15,8 @@ import {
   Home, 
   BookOpen,
   Users,
-  Settings,
+  HelpCircle,
+  BarChart3,
   LogOut,
   GraduationCap
 } from 'lucide-react';
@@ -28,7 +29,8 @@ export const AdminSidebar = () => {
     { name: 'Dashboard', href: '/admin/dashboard', icon: Home },
     { name: 'Courses', href: '/admin/courses', icon: BookOpen },
     { name: 'Students', href: '/admin/students', icon: Users },
-    { name: 'Settings', href: '/admin/settings', icon: Settings },
+    { name: 'Practice Questions', href: '/admin/practice-questions', icon: HelpCircle },
+    { name: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
   ];
 
   const handleSignOut = async () => {

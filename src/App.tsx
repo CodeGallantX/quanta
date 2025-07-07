@@ -23,9 +23,13 @@ import NotFound from "@/pages/NotFound";
 
 // Admin pages
 import AdminLogin from "@/pages/admin/AdminLogin";
+import AdminSignup from "@/pages/admin/AdminSignup";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminCourses from "@/pages/admin/AdminCourses";
+import AdminLessons from "@/pages/admin/AdminLessons";
 import AdminStudents from "@/pages/admin/AdminStudents";
+import AdminPracticeQuestions from "@/pages/admin/AdminPracticeQuestions";
+import AdminAnalytics from "@/pages/admin/AdminAnalytics";
 
 const queryClient = new QueryClient();
 
@@ -41,6 +45,7 @@ const App = () => (
             <AdminAuthProvider>
               <Routes>
                 <Route path="login" element={<AdminLogin />} />
+                <Route path="signup" element={<AdminSignup />} />
                 <Route path="dashboard" element={
                   <AdminProtectedRoute>
                     <AdminDashboard />
@@ -51,9 +56,24 @@ const App = () => (
                     <AdminCourses />
                   </AdminProtectedRoute>
                 } />
+                <Route path="courses/:subjectId/lessons" element={
+                  <AdminProtectedRoute>
+                    <AdminLessons />
+                  </AdminProtectedRoute>
+                } />
                 <Route path="students" element={
                   <AdminProtectedRoute>
                     <AdminStudents />
+                  </AdminProtectedRoute>
+                } />
+                <Route path="practice-questions" element={
+                  <AdminProtectedRoute>
+                    <AdminPracticeQuestions />
+                  </AdminProtectedRoute>
+                } />
+                <Route path="analytics" element={
+                  <AdminProtectedRoute>
+                    <AdminAnalytics />
                   </AdminProtectedRoute>
                 } />
                 <Route path="" element={<Navigate to="/admin/dashboard" replace />} />

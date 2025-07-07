@@ -1,6 +1,7 @@
 
 import { useState, useEffect, createContext, useContext } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import bcrypt from 'bcryptjs';
 
 interface AdminUser {
   id: string;
@@ -39,8 +40,7 @@ export const AdminAuthProvider = ({ children }: { children: React.ReactNode }) =
 
   const signIn = async (email: string, password: string) => {
     try {
-      // For demo purposes, we'll use a simple check
-      // In production, you'd want to implement proper password hashing verification
+      // Fetch admin user from database
       const { data: adminData, error } = await supabase
         .from('admin_users')
         .select('*')
@@ -56,12 +56,18 @@ export const AdminAuthProvider = ({ children }: { children: React.ReactNode }) =
         return { error: new Error('Invalid credentials') };
       }
 
-      // For demo purposes, we'll accept any password for existing admin users
-      // In production, you'd verify the password hash here
-      console.log('Admin user found:', adminData.email);
+      // Verify password hash
+      const isPasswordValid = await bcrypt.compare(password, adminData.password_hash);
       
-      setAdminUser(adminData);
-      localStorage.setItem('adminUser', JSON.stringify(adminData));
+      if (!isPasswordValid) {
+        return { error: new Error('Invalid credentials') };
+      }
+
+      // Remove password_hash from the user object for security
+      const { password_hash, ...userWithoutPassword } = adminData;
+      
+      setAdminUser(userWithoutPassword);
+      localStorage.setItem('adminUser', JSON.stringify(userWithoutPassword));
       
       return { error: null };
     } catch (error) {

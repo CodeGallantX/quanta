@@ -2,7 +2,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { Button } from '@/components/ui/button';
-import { 
+import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
@@ -11,8 +11,8 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { 
-  Home, 
+import {
+  Home,
   BookOpen,
   Users,
   HelpCircle,
@@ -41,22 +41,24 @@ export const AdminSidebar = () => {
     <Sidebar>
       <SidebarHeader className="p-6">
         <div className="flex items-center space-x-2">
-          <GraduationCap className="h-8 w-8 text-emerald-600" />
+          <div className="w-20">
+            <img src="/quanta.png" alt="quanta logo" className="w-full h-full object-cover" />
+          </div>
           <div>
-            <h1 className="text-xl font-bold text-emerald-600">Quanta Admin</h1>
+            <h1 className="text-xl font-bold text-emerald-600">Admin</h1>
             <p className="text-sm text-gray-600">
               {adminUser?.full_name || 'Administrator'}
             </p>
           </div>
         </div>
       </SidebarHeader>
-      
+
       <SidebarContent>
         <SidebarMenu>
           {navigation.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.href;
-            
+
             return (
               <SidebarMenuItem key={item.name}>
                 <SidebarMenuButton asChild isActive={isActive}>
@@ -70,7 +72,7 @@ export const AdminSidebar = () => {
           })}
         </SidebarMenu>
       </SidebarContent>
-      
+
       <SidebarFooter className="p-4">
         <Button
           onClick={handleSignOut}

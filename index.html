@@ -1,44 +1,94 @@
-
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Quanta - Interactive Learning Platform</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-    <script>
-      // Fix for share-modal DOM access - ensure DOM is ready
-      document.addEventListener('DOMContentLoaded', function() {
-        // Only try to access share modal elements if they exist
-        const shareModal = document.getElementById('share-modal');
-        const shareButton = document.getElementById('share-button');
-        const closeButton = document.getElementById('close-share-modal');
-        
-        if (shareModal && shareButton) {
-          shareButton.addEventListener('click', function() {
-            shareModal.style.display = 'block';
-          });
-        }
-        
-        if (shareModal && closeButton) {
-          closeButton.addEventListener('click', function() {
+
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Title -->
+  <title>Quanta - Interactive Learning Platform for Smart Education</title>
+
+  <!-- Primary Meta Tags -->
+  <meta name="title" content="Quanta - Interactive Learning Platform for Smart Education">
+  <meta name="description" content="Quanta is a next-gen, interactive learning platform designed to make studying smarter, faster, and more engaging for students at every level.">
+  <meta name="keywords" content="Quanta, Learning Platform, EdTech, Online Education, Study Tools, Student Dashboard, Academic Support, Interactive Quizzes, Smart Learning">
+  <meta name="author" content="Quanta Team">
+  <meta name="robots" content="index, follow">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+
+  <!-- Canonical URL -->
+  <link rel="canonical" href="https://quanta.vercel.app/" />
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://quanta.vercel.app/" />
+  <meta property="og:title" content="Quanta - Interactive Learning Platform for Smart Education" />
+  <meta property="og:description" content="Smarter studying starts here. Explore adaptive learning tools, real-time quizzes, and personalized dashboards." />
+  <meta property="og:image" content="https://quanta.vercel.app/quanta.png" />
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:url" content="https://quanta.vercel.app/" />
+  <meta name="twitter:title" content="Quanta - Interactive Learning Platform for Smart Education" />
+  <meta name="twitter:description" content="Smarter studying starts here. Explore adaptive learning tools, real-time quizzes, and personalized dashboards." />
+  <meta name="twitter:image" content="https://quanta.vercel.app/quanta.png" />
+
+  <!-- Preload main script -->
+  <link rel="preload" href="/src/main.tsx" as="script">
+
+  <!-- Structured Data (JSON-LD) -->
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "EducationalOrganization",
+      "name": "Quanta",
+      "url": "https://quanta.vercel.app",
+      "logo": "https://quanta.vercel.app/quanta.png",
+      "description": "Quanta is an interactive EdTech platform designed for modern learners. It provides tools for smart studying, academic tracking, and engaging educational content.",
+      "sameAs": [
+        "https://twitter.com/quantaedu",
+        "https://facebook.com/quantaedu"
+      ]
+    }
+  </script>
+</head>
+
+<body>
+  <div id="root"></div>
+
+  <script type="module" src="/src/main.tsx"></script>
+
+  <script>
+    // Fix for share-modal DOM access - ensure DOM is ready
+    document.addEventListener('DOMContentLoaded', function () {
+      const shareModal = document.getElementById('share-modal');
+      const shareButton = document.getElementById('share-button');
+      const closeButton = document.getElementById('close-share-modal');
+
+      if (shareModal && shareButton) {
+        shareButton.addEventListener('click', function () {
+          shareModal.style.display = 'block';
+        });
+      }
+
+      if (shareModal && closeButton) {
+        closeButton.addEventListener('click', function () {
+          shareModal.style.display = 'none';
+        });
+      }
+
+      if (shareModal) {
+        window.addEventListener('click', function (event) {
+          if (event.target === shareModal) {
             shareModal.style.display = 'none';
-          });
-        }
-        
-        // Close modal when clicking outside
-        if (shareModal) {
-          window.addEventListener('click', function(event) {
-            if (event.target === shareModal) {
-              shareModal.style.display = 'none';
-            }
-          });
-        }
-      });
-    </script>
-  </body>
+          }
+        });
+      }
+    });
+  </script>
+</body>
+
 </html>

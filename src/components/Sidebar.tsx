@@ -23,6 +23,7 @@ const Sidebar = () => {
     { name: 'Dashboard', href: '/dashboard', icon: Home },
     { name: 'Physics', href: '/dashboard/physics', icon: Zap },
     { name: 'Chemistry', href: '/dashboard/chemistry', icon: Atom },
+    { name: 'Yoruba', href: '/dashboard/YOR102', icon: Atom },
     { name: 'Practice', href: '/dashboard/practice', icon: Brain },
     { name: 'Profile', href: '/dashboard/profile', icon: User },
   ];
